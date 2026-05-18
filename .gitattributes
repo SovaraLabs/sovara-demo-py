@@ -1,0 +1,2 @@
+pdfs/*.pdf filter=lfs diff=lfs merge=lfs -text
+data/pageindex/** filter=lfs diff=lfs merge=lfs -text

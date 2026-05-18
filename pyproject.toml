@@ -1,0 +1,30 @@
+[project]
+name = "sovara-demo"
+version = "0.1.0"
+description = "Sovara Demo: Vectorless RAG on Finance Bench."
+requires-python = ">=3.10"
+dependencies = [
+    "claude-agent-sdk",
+    "litellm==1.83.13",
+    "openai",
+    "pymupdf==1.26.4",
+    "PyPDF2==3.0.1",
+    "python-dotenv==1.0.1",
+    "pyyaml==6.0.2",
+    "sovara",
+    "tqdm",
+]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["sovara_demo*"]
+
+[tool.setuptools.package-data]
+"sovara_demo.pageindex" = ["config.yaml"]
