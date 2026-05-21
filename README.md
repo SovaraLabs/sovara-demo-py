@@ -5,6 +5,20 @@ queues selected runs for annotation review.
 
 ## 1. Clone the demo
 
+This repository uses Git LFS for the FinanceBench PDFs and PageIndex data.
+Install and enable Git LFS before cloning:
+
+```sh
+brew install git-lfs
+git lfs install
+```
+
+On Windows, install Git LFS from https://git-lfs.com/ and then run:
+
+```powershell
+git lfs install
+```
+
 Clone this repository so the path is exactly `~/sovara-demo`:
 
 ```sh
