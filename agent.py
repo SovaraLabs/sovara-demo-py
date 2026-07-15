@@ -9,7 +9,7 @@ import json
 import os
 from decimal import Decimal, getcontext
 
-from sovara import log_input, log_output
+from sovara import SovaraClient
 from sovara_demo.env import load_repo_env
 from sovara_demo.pageindex.retrieve import get_document as pageindex_get_document
 from sovara_demo.pageindex.retrieve import get_document_outline as pageindex_get_document_outline
@@ -20,6 +20,11 @@ from sovara_demo.pageindex.retrieve import search_page_content as pageindex_sear
 
 
 load_repo_env()
+
+sovara_client = SovaraClient(
+    project_name="sovara-demo",
+    base_url="https://sovara-demo-exec.sovara-labs.com",
+)
 
 REPO_ROOT = os.path.abspath(os.path.dirname(__file__))
 DEFAULT_INDEX_ROOT = os.path.join(REPO_ROOT, "data", "pageindex")
@@ -623,27 +628,28 @@ async def answer_question_async(
         ),
     ]
     prompt = "\n".join(prompt_parts)
-    log_input(question)
     assistant_text = []
     final_answer = ""
 
-    async with ClaudeSDKClient(options=options) as client:
-        await client.query(prompt)
-        async for message in client.receive_response():
-            if verbose:
-                _print_verbose_message(message)
-            if isinstance(message, AssistantMessage):
-                for block in message.content:
-                    if hasattr(block, "text") and block.text.strip():
-                        assistant_text.append(block.text)
-            elif isinstance(message, ResultMessage):
-                if getattr(message, "is_error", False):
-                    raise RuntimeError(message.result or "Claude agent returned an error")
-                final_answer = message.result or ""
+    with sovara_client.run("financebench/answer-question"):
+        sovara_client.log_input(question)
+        async with ClaudeSDKClient(options=options) as client:
+            await client.query(prompt)
+            async for message in client.receive_response():
+                if verbose:
+                    _print_verbose_message(message)
+                if isinstance(message, AssistantMessage):
+                    for block in message.content:
+                        if hasattr(block, "text") and block.text.strip():
+                            assistant_text.append(block.text)
+                elif isinstance(message, ResultMessage):
+                    if getattr(message, "is_error", False):
+                        raise RuntimeError(message.result or "Claude agent returned an error")
+                    final_answer = message.result or ""
 
-    answer = final_answer.strip() if final_answer.strip() else "\n".join(assistant_text).strip()
-    log_output(answer)
-    return answer
+        answer = final_answer.strip() if final_answer.strip() else "\n".join(assistant_text).strip()
+        sovara_client.log_output(answer)
+        return answer
 
 
 def _run_async(coro):

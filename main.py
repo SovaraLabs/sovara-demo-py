@@ -8,7 +8,6 @@ import os
 import time
 
 from openai import AsyncOpenAI
-import sovara
 
 from sovara_demo.env import load_repo_env
 
@@ -113,62 +112,48 @@ def run_sample(args) -> dict:
     if gold_answer is None:
         raise ValueError(f"FinanceBench sample {args.sample_id} has no gold answer")
 
-    run_name = args.run_name or f"financebench/sample_{args.sample_id}"
-    equivalent = None
-
-    with sovara.run(run_name) as run_id:
-        agent_answer = answer_financebench_sample(
-            sample,
-            index_root=args.index_root,
-            model=args.agent_model,
-            max_turns=args.max_turns,
-            verbose=args.verbose,
+    agent_answer = answer_financebench_sample(
+        sample,
+        index_root=args.index_root,
+        model=args.agent_model,
+        max_turns=args.max_turns,
+        verbose=args.verbose,
+    )
+    equivalent = asyncio.run(
+        check_answer_equivalence(
+            agent_answer,
+            gold_answer,
+            query=sample["question"],
+            model=args.eval_model,
         )
-        with sovara.disable_tracing():
-            equivalent = asyncio.run(
-                check_answer_equivalence(
-                    agent_answer,
-                    gold_answer,
-                    query=sample["question"],
-                    model=args.eval_model,
-                )
-            )
-        result = {
-            "run_id": run_id,
-            "sample_id": args.sample_id,
-            "financebench_id": sample.get("financebench_id"),
-            "company": sample["company"],
-            "ticker": ticker_for_company(sample["company"]),
-            "doc_name": sample["doc_name"],
-            "question": sample["question"],
-            "gold_answer": gold_answer,
-            "agent_answer": agent_answer,
-            "equivalent": equivalent,
-            "validator_skipped": False,
-            "success": True,
-            "error": None,
-            "timed_out": False,
-            "agent_model": args.agent_model or DEFAULT_AGENT_MODEL,
-            "eval_model": args.eval_model,
-        }
-        print(json.dumps(result, indent=2, ensure_ascii=False))
-        if args.queue_for_annotation:
-            sovara.queue_for_annotation()
+    )
+    result = {
+        "sample_id": args.sample_id,
+        "financebench_id": sample.get("financebench_id"),
+        "company": sample["company"],
+        "ticker": ticker_for_company(sample["company"]),
+        "doc_name": sample["doc_name"],
+        "question": sample["question"],
+        "gold_answer": gold_answer,
+        "agent_answer": agent_answer,
+        "equivalent": equivalent,
+        "validator_skipped": False,
+        "success": True,
+        "error": None,
+        "timed_out": False,
+        "agent_model": args.agent_model or DEFAULT_AGENT_MODEL,
+        "eval_model": args.eval_model,
+    }
+    print(json.dumps(result, indent=2, ensure_ascii=False))
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Run one FinanceBench sample through the agent.")
-    parser.add_argument("--run-name", default=None, help="Sovara run name. Defaults to financebench/sample_<id>.")
     parser.add_argument("--sample-id", type=int, required=True, help="Zero-based FinanceBench sample id.")
     parser.add_argument("--samples-path", default=DEFAULT_SAMPLES_PATH)
     parser.add_argument("--index-root", default=DEFAULT_INDEX_ROOT)
     parser.add_argument("--agent-model", default=None)
     parser.add_argument("--eval-model", default="gpt-4o-2024-11-20")
-    parser.add_argument(
-        "--queue-for-annotation",
-        action="store_true",
-        help="Ask the annotation agent to queue the run after validation.",
-    )
     parser.add_argument("--max-turns", type=int, default=DEFAULT_MAX_TURNS)
     parser.add_argument("--verbose", action="store_true")
     args = parser.parse_args()

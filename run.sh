@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Run a range of FinanceBench samples in parallel and queue each run for annotation.
+# Run a range of FinanceBench samples in parallel.
 #
 # Example:
 #   SAMPLE_START=0 SAMPLE_STOP=10 MAX_PARALLEL=3 ./run.sh
@@ -11,7 +11,7 @@ set -euo pipefail
 SAMPLE_START="${SAMPLE_START:-0}"
 SAMPLE_STOP="${SAMPLE_STOP:-}"
 MAX_PARALLEL="${MAX_PARALLEL:-3}"
-LOG_DIR="${LOG_DIR:-logs/queue_samples_$(date +%Y%m%d_%H%M%S)}"
+LOG_DIR="${LOG_DIR:-logs/samples_$(date +%Y%m%d_%H%M%S)}"
 DRY_RUN="${DRY_RUN:-false}"
 
 if [[ -z "$SAMPLE_STOP" ]]; then
@@ -56,11 +56,11 @@ run_one() {
 
     echo "[sample $sample_id] starting"
     if [[ "$DRY_RUN" == "true" ]]; then
-        echo "uv run python main.py --sample-id $sample_id --queue-for-annotation"
+        echo "uv run python main.py --sample-id $sample_id"
         return 0
     fi
 
-    if uv run python main.py --sample-id "$sample_id" --queue-for-annotation > "$log_file" 2>&1; then
+    if uv run python main.py --sample-id "$sample_id" > "$log_file" 2>&1; then
         echo "[sample $sample_id] done -> $log_file"
     else
         local exit_code=$?
@@ -69,7 +69,7 @@ run_one() {
     fi
 }
 
-echo "Queueing samples [$SAMPLE_START, $SAMPLE_STOP) with MAX_PARALLEL=$MAX_PARALLEL"
+echo "Running samples [$SAMPLE_START, $SAMPLE_STOP) with MAX_PARALLEL=$MAX_PARALLEL"
 echo "Logs: $LOG_DIR"
 
 failures=0

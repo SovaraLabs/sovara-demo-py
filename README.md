@@ -1,7 +1,7 @@
 # Sovara FinanceBench Demo
 
-This demo runs a FinanceBench RAG workflow, records the trace in Sovara, and
-queues selected runs for annotation review.
+This demo runs a FinanceBench RAG workflow and checks the generated answer
+against the benchmark answer.
 
 ## 1. Clone the demo
 
@@ -48,15 +48,7 @@ powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | ie
 If your terminal still says `uv: command not found`, close and reopen the
 terminal, then run `uv --version`.
 
-## 3. Optional: Install the Sovara desktop app
-
-Download and install the Sovara desktop app from the Sovara docs.
-
-## 4. Optional: Open the desktop app
-
-After installation, open Sovara.
-
-## 5. Add model API keys
+## 3. Add model API keys
 
 Create a local `.env` file from the example:
 
@@ -71,48 +63,27 @@ OPENAI_API_KEY=<your OpenAI API key>
 ANTHROPIC_API_KEY=<your Anthropic API key>
 ```
 
-You can also add provider keys in the desktop app Settings:
-
-<img src="docs/screenshots/settings.png" alt="Sovara settings screen" width="900">
-
-## 6. Run the first sample and queue it for annotation
+## 4. Run the first sample
 
 From the demo folder, run sample `81`:
 
 ```sh
-uv run main.py --sample-id 81 --queue-for-annotation
+uv run main.py --sample-id 81
 ```
 
 The first run can take a few minutes because `uv` may need to create the Python
 environment and install dependencies. When the command completes, it prints a
-JSON result in the terminal and records the run in Sovara.
+JSON result in the terminal.
 
-## 7. Inspect the run
+## 5. Run three more samples
 
-In the desktop app, open the Runs view and select the newest run. You should see
-the trace, inputs, outputs, and recorded tool activity.
-
-## 8. Run three more samples
-
-Run a few more sample IDs so there are multiple traces to compare and annotate:
+Run a few more sample IDs to compare their results:
 
 ```sh
-uv run main.py --sample-id 82 --queue-for-annotation
-uv run main.py --sample-id 83 --queue-for-annotation
-uv run main.py --sample-id 84 --queue-for-annotation
+uv run main.py --sample-id 82
+uv run main.py --sample-id 83
+uv run main.py --sample-id 84
 ```
-
-Each command records a new run and puts it into the annotation queue.
-
-## 9. Check the annotation queue
-
-Open the Annotation view in the desktop app. The queued runs should appear for
-review.
-
-## 10. Inspect a queued run and chat with the trace
-
-From the Annotation view, click **Inspect run**. This opens the run alongside
-the annotation workflow so you can inspect the trace and chat with it.
 
 ## Questions
 
