@@ -2071,7 +2071,7 @@ wheels = [
 
 [[package]]
 name = "sovara"
-version = "0.4.5"
+version = "0.4.6"
 source = { editable = "../sovara/packages/python-sdk" }
 dependencies = [
     { name = "dill" },
@@ -2081,7 +2081,6 @@ dependencies = [
     { name = "httpx" },
     { name = "jsonpickle" },
     { name = "pydantic" },
-    { name = "pyyaml" },
 ]
 
 [package.metadata]
@@ -2098,7 +2097,6 @@ requires-dist = [
     { name = "openai", marker = "extra == 'examples'" },
     { name = "openai-agents", marker = "extra == 'examples'" },
     { name = "pydantic" },
-    { name = "pyyaml" },
 ]
 provides-extras = ["examples"]
 

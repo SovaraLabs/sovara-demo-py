@@ -114,6 +114,7 @@ def run_sample(args) -> dict:
 
     agent_answer = answer_financebench_sample(
         sample,
+        sample_id=args.sample_id,
         index_root=args.index_root,
         model=args.agent_model,
         max_turns=args.max_turns,

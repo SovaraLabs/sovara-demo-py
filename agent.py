@@ -22,8 +22,7 @@ from sovara_demo.pageindex.retrieve import search_page_content as pageindex_sear
 load_repo_env()
 
 sovara_client = SovaraClient(
-    project_name="sovara-demo",
-    base_url="https://sovara-demo-exec.sovara-labs.com",
+    project_name="sovara-demo"
 )
 
 REPO_ROOT = os.path.abspath(os.path.dirname(__file__))
@@ -553,6 +552,7 @@ async def answer_question_async(
     verbose: bool = False,
     question_type: str | None = None,
     question_reasoning: str | None = None,
+    sample_id: int | None = None,
 ) -> str:
     from claude_agent_sdk import ClaudeAgentOptions, ClaudeSDKClient
     from claude_agent_sdk.types import AssistantMessage, ResultMessage
@@ -631,7 +631,12 @@ async def answer_question_async(
     assistant_text = []
     final_answer = ""
 
-    with sovara_client.run("financebench/answer-question"):
+    run_name = (
+        f"financebench/answer-question/sample-{sample_id}"
+        if sample_id is not None
+        else "financebench/answer-question"
+    )
+    with sovara_client.run(run_name):
         sovara_client.log_input(question)
         async with ClaudeSDKClient(options=options) as client:
             await client.query(prompt)
@@ -671,6 +676,7 @@ def answer_question(
     verbose: bool = False,
     question_type: str | None = None,
     question_reasoning: str | None = None,
+    sample_id: int | None = None,
 ) -> str:
     return _run_async(
         answer_question_async(
@@ -682,6 +688,7 @@ def answer_question(
             verbose,
             question_type,
             question_reasoning,
+            sample_id,
         )
     )
 
@@ -692,6 +699,7 @@ def answer_financebench_sample(
     model: str | None = None,
     max_turns: int | None = DEFAULT_MAX_TURNS,
     verbose: bool = False,
+    sample_id: int | None = None,
 ) -> str:
     doc_id, document = load_indexed_document_for_sample(sample, index_root=index_root)
     documents = {doc_id: document}
@@ -704,6 +712,7 @@ def answer_financebench_sample(
         verbose=verbose,
         question_type=sample.get("question_type"),
         question_reasoning=sample.get("question_reasoning"),
+        sample_id=sample_id,
     )
 
 
