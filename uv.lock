@@ -2071,7 +2071,7 @@ wheels = [
 
 [[package]]
 name = "sovara"
-version = "0.4.6"
+version = "0.6.0"
 source = { editable = "../sovara/packages/python-sdk" }
 dependencies = [
     { name = "dill" },

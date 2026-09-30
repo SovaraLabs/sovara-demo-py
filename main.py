@@ -19,6 +19,7 @@ from agent import DEFAULT_INDEX_ROOT
 from agent import DEFAULT_MAX_TURNS
 from agent import answer_financebench_sample
 from agent import ticker_for_company
+from agent import sovara_client
 
 
 REPO_ROOT = os.path.abspath(os.path.dirname(__file__))
@@ -56,7 +57,7 @@ async def get_completion_async(
 
 # Adapted from VectifyAI/Mafin2.5-FinanceBench eval.py:
 # https://github.com/VectifyAI/Mafin2.5-FinanceBench/blob/main/eval.py
-async def check_answer_equivalence(answer, gold_answer, query=None, model="gpt-4o-2024-11-20") -> bool:
+async def check_answer_equivalence(answer, gold_answer, query=None, model="gpt-4o-2024-11-20") -> tuple[str, bool]:
     query_prompt = f"- Query: {query}" if query else ""
     prompt = f"""
 You are an expert evaluator for finance benchmark answers.
@@ -84,10 +85,10 @@ Respond with exactly one word: true or false.
 """
     response = await get_completion_async(prompt, model=model)
     if "true" in response.lower():
-        return True
+        return response, True
     if "false" in response.lower():
-        return False
-    return False
+        return response, False
+    return response, False
 
 
 def load_sample(samples_path: str, sample_id: int) -> dict:
@@ -112,15 +113,19 @@ def run_sample(args) -> dict:
     if gold_answer is None:
         raise ValueError(f"FinanceBench sample {args.sample_id} has no gold answer")
 
-    agent_answer = answer_financebench_sample(
+    eval_id = args.eval_id or sovara_client.create_eval_run()
+    started = time.perf_counter()
+    agent_answer, run_key = answer_financebench_sample(
         sample,
         sample_id=args.sample_id,
+        eval_run_id=eval_id,
         index_root=args.index_root,
         model=args.agent_model,
         max_turns=args.max_turns,
         verbose=args.verbose,
     )
-    equivalent = asyncio.run(
+    agent_latency_seconds = time.perf_counter() - started
+    judge_output, equivalent = asyncio.run(
         check_answer_equivalence(
             agent_answer,
             gold_answer,
@@ -128,7 +133,21 @@ def run_sample(args) -> dict:
             model=args.eval_model,
         )
     )
+    sovara_client.log(
+        run_key=run_key,
+        eval_run_id=eval_id,
+        groundtruth=gold_answer,
+        llm_judge_output=judge_output,
+        llm_judge_is_correct=equivalent,
+        sample_id=args.sample_id,
+        financebench_id=sample["financebench_id"],
+        agent_latency_seconds=agent_latency_seconds,
+    )
     result = {
+        "eval_id": eval_id,
+        "agent_latency_seconds": agent_latency_seconds,
+        "run_key": run_key,
+        "llm_judge_output": judge_output,
         "sample_id": args.sample_id,
         "financebench_id": sample.get("financebench_id"),
         "company": sample["company"],
@@ -146,6 +165,7 @@ def run_sample(args) -> dict:
         "eval_model": args.eval_model,
     }
     print(json.dumps(result, indent=2, ensure_ascii=False))
+    return result
 
 
 def main() -> int:
@@ -154,12 +174,22 @@ def main() -> int:
     parser.add_argument("--samples-path", default=DEFAULT_SAMPLES_PATH)
     parser.add_argument("--index-root", default=DEFAULT_INDEX_ROOT)
     parser.add_argument("--agent-model", default=None)
+    parser.add_argument("--eval-id", default=os.getenv("SOVARA_EVAL_ID"))
     parser.add_argument("--eval-model", default="gpt-4o-2024-11-20")
     parser.add_argument("--max-turns", type=int, default=DEFAULT_MAX_TURNS)
     parser.add_argument("--verbose", action="store_true")
     args = parser.parse_args()
-    run_sample(args)
+    args.eval_id = args.eval_id or sovara_client.create_eval_run()
+    try:
+        run_sample(args)
+    except Exception as exc:
+        failure = {"type": type(exc).__name__, "message": str(exc)}
+        sovara_client.log(eval_run_id=args.eval_id, evaluation_failure=json.dumps(failure))
+        print(json.dumps({"eval_id": args.eval_id, "sample_id": args.sample_id,
+                          "success": False, "failure": failure}))
+        return 1
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

@@ -36,6 +36,13 @@ fi
 
 mkdir -p "$LOG_DIR"
 
+# All parallel samples join one explicitly created evaluation.
+if [[ "$DRY_RUN" != "true" && -z "${SOVARA_EVAL_ID:-}" ]]; then
+    SOVARA_EVAL_ID="$(uv run python -c 'from agent import sovara_client; print(sovara_client.create_eval_run())')"
+    export SOVARA_EVAL_ID
+fi
+echo "Evaluation: ${SOVARA_EVAL_ID:-dry-run}"
+
 cleanup() {
     trap - INT TERM
     echo
@@ -94,6 +101,11 @@ for pid in "${pids[@]}"; do
         failures=$((failures + 1))
     fi
 done
+
+if [[ "$DRY_RUN" != "true" ]]; then
+    uv run python log_evaluation_metrics.py --eval-id "$SOVARA_EVAL_ID" \
+        --log-dir "$LOG_DIR" --start "$SAMPLE_START" --stop "$SAMPLE_STOP"
+fi
 
 if [[ "$failures" -gt 0 ]]; then
     echo "Finished with $failures failed sample(s)."

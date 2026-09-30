@@ -553,7 +553,8 @@ async def answer_question_async(
     question_type: str | None = None,
     question_reasoning: str | None = None,
     sample_id: int | None = None,
-) -> str:
+    eval_run_id: str | None = None,
+) -> tuple[str, str]:
     from claude_agent_sdk import ClaudeAgentOptions, ClaudeSDKClient
     from claude_agent_sdk.types import AssistantMessage, ResultMessage
 
@@ -636,8 +637,8 @@ async def answer_question_async(
         if sample_id is not None
         else "financebench/answer-question"
     )
-    with sovara_client.run(run_name):
-        sovara_client.log_input(question)
+    with sovara_client.run(run_name, eval_run_id=eval_run_id) as run_key:
+        sovara_client.log(run_key=run_key, run_input=question)
         async with ClaudeSDKClient(options=options) as client:
             await client.query(prompt)
             async for message in client.receive_response():
@@ -653,8 +654,8 @@ async def answer_question_async(
                     final_answer = message.result or ""
 
         answer = final_answer.strip() if final_answer.strip() else "\n".join(assistant_text).strip()
-        sovara_client.log_output(answer)
-        return answer
+        sovara_client.log(run_key=run_key, run_output=answer)
+        return answer, run_key
 
 
 def _run_async(coro):
@@ -677,7 +678,8 @@ def answer_question(
     question_type: str | None = None,
     question_reasoning: str | None = None,
     sample_id: int | None = None,
-) -> str:
+    eval_run_id: str | None = None,
+) -> tuple[str, str]:
     return _run_async(
         answer_question_async(
             question,
@@ -689,6 +691,7 @@ def answer_question(
             question_type,
             question_reasoning,
             sample_id,
+            eval_run_id=eval_run_id,
         )
     )
 
@@ -700,7 +703,8 @@ def answer_financebench_sample(
     max_turns: int | None = DEFAULT_MAX_TURNS,
     verbose: bool = False,
     sample_id: int | None = None,
-) -> str:
+    eval_run_id: str | None = None,
+) -> tuple[str, str]:
     doc_id, document = load_indexed_document_for_sample(sample, index_root=index_root)
     documents = {doc_id: document}
     return answer_question(
@@ -713,6 +717,7 @@ def answer_financebench_sample(
         question_type=sample.get("question_type"),
         question_reasoning=sample.get("question_reasoning"),
         sample_id=sample_id,
+        eval_run_id=eval_run_id,
     )
 
 
@@ -732,7 +737,7 @@ def main() -> int:
         "doc_name": args.doc_name,
         "question": args.question,
     }
-    answer = answer_financebench_sample(
+    answer, _run_key = answer_financebench_sample(
         sample,
         index_root=args.index_root,
         model=args.model,
