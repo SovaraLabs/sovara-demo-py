@@ -638,7 +638,7 @@ async def answer_question_async(
         else "financebench/answer-question"
     )
     with sovara_client.run(run_name, eval_run_id=eval_run_id) as run_key:
-        sovara_client.log(run_key=run_key, run_input=question)
+        sovara_client.log(run_id=run_key, run_input=question)
         async with ClaudeSDKClient(options=options) as client:
             await client.query(prompt)
             async for message in client.receive_response():
@@ -654,7 +654,7 @@ async def answer_question_async(
                     final_answer = message.result or ""
 
         answer = final_answer.strip() if final_answer.strip() else "\n".join(assistant_text).strip()
-        sovara_client.log(run_key=run_key, run_output=answer)
+        sovara_client.log(run_id=run_key, run_output=answer)
         return answer, run_key
 
 
