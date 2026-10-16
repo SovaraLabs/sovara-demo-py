@@ -134,7 +134,7 @@ def run_sample(args) -> dict:
         )
     )
     sovara_client.log(
-        run_key=run_key,
+        run_id=run_key,
         eval_run_id=eval_id,
         groundtruth=gold_answer,
         llm_judge_output=judge_output,
